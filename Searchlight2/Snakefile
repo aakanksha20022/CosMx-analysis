@@ -1,0 +1,34 @@
+import os
+
+configfile: "config.yaml"
+
+subtype_de_pairs = list(zip(config["subtypes"], config["de_subtypes"]))
+
+rule all:
+    input:
+        expand(
+            "{out_dir}/{subtype}",
+            out_dir=config["out_dir"],
+            subtype=config["subtypes"]
+        )
+
+rule run_searchlight2:
+    output:
+        directory("{out_dir}/{subtype}")
+    params:
+        out_dir="{out_dir}/{subtype}",
+        bg=config["background"],
+        ss=config["sample_sheet"],
+        ora=config["ora_file"],
+        em=lambda wildcards: f"{config['data_dir']}/{wildcards.subtype}_pseudobulk.tsv",
+        de=lambda wildcards: f"{config['data_dir']}/DE_{config['de_subtypes'][config['subtypes'].index(wildcards.subtype)]}.tsv"
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        python Searchlight2.py --out path={params.out_dir} \
+        --bg file={params.bg} \
+        --em file={params.em} \
+        --ss file={params.ss} \
+        --de file={params.de},numerator=positive,denominator=negative \
+        --ora file={params.ora},type=GO_bp
+        """
